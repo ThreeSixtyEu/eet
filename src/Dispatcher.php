@@ -251,7 +251,7 @@ class Dispatcher {
      * @param $error
      * @throws ServerException
      */
-    private function processError($error) {
+    public function processError($error) {
         if ($error->kod) {
             $msgs = [
                 -1 => 'Docasna technicka chyba zpracovani – odeslete prosim datovou zpravu pozdeji',
