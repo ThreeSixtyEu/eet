@@ -44,7 +44,17 @@ class Dispatcher {
     private $soapClient;
 
     /**
-     * 
+     * @var array [warning code => message]
+     */
+    private $warnings;
+	
+	/**
+	 * @var \stdClass
+	 */
+	private $wholeResponse;
+
+    /**
+     *
      * @param string $key
      * @param string $cert
      */
@@ -52,6 +62,7 @@ class Dispatcher {
         $this->service = $service;
         $this->key = $key;
         $this->cert = $cert;
+        $this->warnings = array();
         $this->checkRequirements();
     }
 
@@ -141,7 +152,7 @@ class Dispatcher {
                 'encoding' => 'base64'
             ],
             'bkp' => [
-                '_' => Format::BKB(sha1($sign)),
+                '_' => Format::BKP(sha1($sign)),
                 'digest' => 'SHA1',
                 'encoding' => 'base16'
             ]
@@ -156,16 +167,27 @@ class Dispatcher {
      */
     public function send(Receipt $receipt, $check = FALSE) {
         $this->initSoapClient();
-
+		
         $response = $this->processData($receipt, $check);
+		$this->wholeResponse = $response;
 
         isset($response->Chyba) && $this->processError($response->Chyba);
-
+        isset($response->Varovani) && $this->warnings = $this->processWarnings($response->Varovani);
         return $check ? TRUE : $response->Potvrzeni->fik;
+    }
+    
+    /**
+     * Returns array of warnings if the last response contains any, empty array otherwise.
+     * 
+     * @return array [warning code => message]
+     */
+    public function getWarnings()
+    {
+        return $this->warnings;
     }
 
     /**
-     * 
+     *
      * @throws RequirementsException
      * @return void
      */
@@ -267,5 +289,51 @@ class Dispatcher {
             throw new ServerException($msg, $error->kod);
         }
     }
+
+    /**
+     * @param \stdClass|array $warnings
+     * @return array [warning code => message]
+     */
+    private function processWarnings($warnings) {
+        $result = array();
+        if(\count($warnings) === 1) {
+            $result[\intval($warnings->kod_varov)] = $this->getWarningMsg($warnings->kod_varov);
+        } else {
+            foreach ($warnings as $warning) {
+                $result[\intval($warning->kod_varov)] = $this->getWarningMsg($warning->kod_varov);
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param int $id warning code
+     * @return string warning message
+     */
+    private function getWarningMsg($id)
+    {
+      $result = 'Nezname varovani, zkontrolujte technickou specifikaci';
+      $msgs = [
+                1 => 'DIC poplatnika v datove zprave se neshoduje s DIC v certifikatu',
+                2 => 'Chybny format DIC poverujiciho poplatnika',
+                3 => 'Chybna hodnota PKP',
+                4 => 'Datum a cas prijeti trzby je novejsi nez datum a cas prijeti zpravy',
+                5 => 'Datum a cas prijeti trzby je vyrazne v minulosti',
+            ];
+      if (\array_key_exists( $id, $msgs )) {
+          $result = $msgs[$id];
+      }
+      return $result;
+    }
+	
+	/**
+	 * @return \stdClass
+	 */
+	public function getWholeResponse()
+	{
+		return $this->wholeResponse;
+	}
+    
+    
 
 }
