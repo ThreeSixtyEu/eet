@@ -306,7 +306,7 @@ class Dispatcher {
      * @param \stdClass|array $warnings
      * @return array [warning code => message]
      */
-    private function processWarnings($warnings) {
+    public function processWarnings($warnings) {
         $result = array();
         if(\count($warnings) === 1) {
             $result[\intval($warnings->kod_varov)] = $this->getWarningMsg($warnings->kod_varov);
@@ -322,7 +322,7 @@ class Dispatcher {
      * @param int $id warning code
      * @return string warning message
      */
-    private function getWarningMsg($id)
+    public function getWarningMsg($id)
     {
       $result = 'Nezname varovani, zkontrolujte technickou specifikaci';
       $msgs = [
