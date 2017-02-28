@@ -148,37 +148,37 @@ class Dispatcher {
      * @return array
      */
     public function getCheckCodes(Receipt $receipt) {
-        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, ['type' => 'private']);
+        $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type' => 'private'));
         if ($this->passphrase) {
             $objKey->passphrase = $this->passphrase;
         }
         $objKey->loadKey($this->key, TRUE);
 
-        $arr = [
+        $arr = array(
             $receipt->dic_popl,
             $receipt->id_provoz,
             $receipt->id_pokl,
             $receipt->porad_cis,
             $receipt->dat_trzby->format('c'),
             Format::price($receipt->celk_trzba)
-        ];
+        );
 
         $this->pkpCode = $objKey->signData(join('|', $arr));
         $this->bkpCode = Format::BKP(sha1($this->pkpCode));
 
-        return [
-            'pkp' => [
+        return array(
+	        'pkp' => array(
                 '_' => $this->pkpCode,
                 'digest' => 'SHA256',
                 'cipher' => 'RSA2048',
                 'encoding' => 'base64'
-            ],
-            'bkp' => [
+	        ),
+	        'bkp' => array(
                 '_' => $this->bkpCode,
                 'digest' => 'SHA1',
                 'encoding' => 'base16'
-            ]
-        ];
+	        )
+        );
     }
 
     /**
@@ -241,14 +241,14 @@ class Dispatcher {
     }
 
     public function prepareData($receipt, $check = FALSE) {
-        $head = [
+        $head = array(
             'uuid_zpravy' => $receipt->uuid_zpravy,
             'dat_odesl' => time(),
             'prvni_zaslani' => $receipt->prvni_zaslani,
             'overeni' => $check
-        ];
+        );
 
-        $body = [
+        $body = array(
             'dic_popl' => $receipt->dic_popl,
             'dic_poverujiciho' => $receipt->dic_poverujiciho,
             'id_provoz' => $receipt->id_provoz,
@@ -270,13 +270,13 @@ class Dispatcher {
             'urceno_cerp_zuct' => Format::price($receipt->urceno_cerp_zuct),
             'cerp_zuct' => Format::price($receipt->cerp_zuct),
             'rezim' => $receipt->rezim
-        ];
+        );
 
-        return [
+        return array(
             'Hlavicka' => $head,
             'Data' => $body,
             'KontrolniKody' => $this->getCheckCodes($receipt)
-        ];
+        );
     }
 
     /**
@@ -297,7 +297,7 @@ class Dispatcher {
      */
     public function processError($error) {
         if ($error->kod) {
-            $msgs = [
+            $msgs = array(
                 -1 => 'Docasna technicka chyba zpracovani – odeslete prosim datovou zpravu pozdeji',
                 2 => 'Kodovani XML neni platne',
                 3 => 'XML zprava nevyhovela kontrole XML schematu',
@@ -306,7 +306,7 @@ class Dispatcher {
                 6 => 'DIC poplatnika ma chybnou strukturu',
                 7 => 'Datova zprava je prilis velka',
                 8 => 'Datova zprava nebyla zpracovana kvuli technicke chybe nebo chybe dat',
-            ];
+            );
             $msg = isset($msgs[$error->kod]) ? $msgs[$error->kod] : '';
             throw new ServerException($msg, $error->kod);
         }
@@ -335,13 +335,13 @@ class Dispatcher {
     public function getWarningMsg($id)
     {
       $result = 'Nezname varovani, zkontrolujte technickou specifikaci';
-      $msgs = [
+      $msgs = array(
                 1 => 'DIC poplatnika v datove zprave se neshoduje s DIC v certifikatu',
                 2 => 'Chybny format DIC poverujiciho poplatnika',
                 3 => 'Chybna hodnota PKP',
                 4 => 'Datum a cas prijeti trzby je novejsi nez datum a cas prijeti zpravy',
                 5 => 'Datum a cas prijeti trzby je vyrazne v minulosti',
-            ];
+      );
       if (\array_key_exists( $id, $msgs )) {
           $result = $msgs[$id];
       }

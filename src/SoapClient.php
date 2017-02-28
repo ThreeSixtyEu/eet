@@ -63,10 +63,11 @@ class SoapClient extends \SoapClient {
 	 */
 	public function __construct($service, $key, $cert, $trace = FALSE, $passphrase = NULL) {
 		$this->connectionStartTime = microtime(TRUE);
-		parent::__construct($service, [
+		parent::__construct($service, array(
 			'exceptions' => TRUE,
 			'trace' => $trace
-		]);
+		)
+		);
 		$this->key = $key;
 		$this->cert = $cert;
 		$this->traceRequired = $trace;
@@ -81,12 +82,12 @@ class SoapClient extends \SoapClient {
 		$objWSSE = new WSSESoap($doc);
 		$objWSSE->addTimestamp();
 
-		$objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, ['type' => 'private']);
+		$objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type' => 'private'));
 		if ($this->passphrase) {
 			$objKey->passphrase = $this->passphrase;
 		}
 		$objKey->loadKey($this->key, TRUE);
-		$objWSSE->signSoapDoc($objKey, ["algorithm" => XMLSecurityDSig::SHA256]);
+		$objWSSE->signSoapDoc($objKey, array("algorithm" => XMLSecurityDSig::SHA256));
 
 		$token = $objWSSE->addBinaryToken(file_get_contents($this->cert));
 		$objWSSE->attachTokentoSig($token);
@@ -130,48 +131,27 @@ class SoapClient extends \SoapClient {
 	 */
 	public function __doRequestByCurl($request, $location, $action, $version, $one_way = FALSE)
 	{
-		// Call via Curl and use the timeout a
-		$curl = curl_init($location);
-		if ($curl === false) {
-			throw new ClientException('Curl initialisation failed');
-		}
+		$cmd = 'curl ' . $location;
+
 		/** @var $headers array of headers to be sent with request */
 		$headers = array(
 			'User-Agent: PHP-SOAP',
-			'Content-Type: text/xml; charset=utf-8',
-			'SOAPAction: "' . $action . '"',
+			'Content-Type: ' . ($version == 2 ? 'application/soap+xml' : 'text/xml') . '; charset=utf-8',
+			'SOAPAction: "OdeslaniTrzby"',
 			'Content-Length: ' . strlen($request),
 		);
-		$options = array(
-			CURLOPT_VERBOSE        => false,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_POST           => true,
-			CURLOPT_POSTFIELDS     => $request,
-			CURLOPT_HEADER         => $headers,
-			CURLOPT_HTTPHEADER     => array(sprintf('Content-Type: %s', $version == 2 ? 'application/soap+xml' : 'text/xml'), sprintf('SOAPAction: %s', $action)),
-		);
-		// Timeout in milliseconds
-		$options = $this->__curlSetTimeoutOption($options, $this->timeout, 'CURLOPT_TIMEOUT');
-		// ConnectTimeout in milliseconds
-		$options = $this->__curlSetTimeoutOption($options, $this->connectTimeout, 'CURLOPT_CONNECTTIMEOUT');
-
-		$this->__setCurlOptions($curl, $options);
-		$response = curl_exec($curl);
-		$this->lastResponse = $response;
-
-		if (curl_errno($curl)) {
-			$errorMessage = curl_error($curl);
-			$errorNumber  = curl_errno($curl);
-			curl_close($curl);
-			throw new ClientException($errorMessage, $errorNumber);
+		// add headers
+		foreach ($headers as $h) {
+			$cmd .= ' -H \''.$h.'\'';
 		}
+		// add POST data
+		$cmd .= ' -X POST -d \'' . $request . '\'';
 
-		$header_len = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
-		$header = substr($response, 0, $header_len);
-		$body = substr($response, $header_len);
+		// execute command using shell
+		$response = $body = shell_exec($cmd);
+		$this->lastResponse = $response;
 		$this->lastResponseBody = $body;
 
-		curl_close($curl);
 		// Return?
 		if ($one_way) {
 			return null;
