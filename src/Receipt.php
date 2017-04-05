@@ -84,4 +84,7 @@ class Receipt {
     /** @var int */
     public $rezim = 0;
 
+    public function __construct() {
+        $this->dat_trzby = new \DateTime();
+    }
 }
