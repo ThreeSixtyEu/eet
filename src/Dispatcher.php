@@ -320,19 +320,31 @@ class Dispatcher {
      */
     public function processError($error) {
         if ($error->kod) {
-            $msgs = [
-                -1 => 'Dočasná technická chyba zpracování – odešlete prosím datovou zprávu později.',
-                2 => 'Kódování XML není platné.',
-                3 => 'XML zpráva nevyhověla kontrole XML schématu.',
-                4 => 'Neplatný podpis SOAP zprávy.',
-                5 => 'Neplatný kontrolní bezpečnostní kód poplatníka (BKP).',
-                6 => 'DIČ poplatníka má chybnou strukturu.',
-                7 => 'Datová zpráva je příliš velká.',
-                8 => 'Datová zpráva nebyla zpracována kvůli technické chybě nebo chybě dat.',
-            ];
-            $msg = isset($msgs[$error->kod]) ? $msgs[$error->kod] : '';
-            throw new ServerException($msg, $error->kod);
+            throw new ServerException($this->getErrorMsg($error->kod), $error->kod);
         }
+    }
+
+    /**
+     * @param int $id error code
+     * @return string error message
+     */
+    public function getErrorMsg($id)
+    {
+        $result = 'Neznámá chyba, zkontrolujte technickou specifikaci.';
+        $msgs = [
+            -1 => 'Dočasná technická chyba zpracování – odešlete prosím datovou zprávu později.',
+            2 => 'Kódování XML není platné.',
+            3 => 'XML zpráva nevyhověla kontrole XML schématu.',
+            4 => 'Neplatný podpis SOAP zprávy.',
+            5 => 'Neplatný kontrolní bezpečnostní kód poplatníka (BKP).',
+            6 => 'DIČ poplatníka má chybnou strukturu.',
+            7 => 'Datová zpráva je příliš velká.',
+            8 => 'Datová zpráva nebyla zpracována kvůli technické chybě nebo chybě dat.',
+        ];
+        if (\array_key_exists( $id, $msgs )) {
+            $result = $msgs[$id];
+        }
+        return $result;
     }
 
     /**
